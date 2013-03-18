@@ -10,7 +10,8 @@ img_    tag for an UIImageView
     assumes that there is a @2x in it
 
 Usage:
-   psd_to_cocoa.py <psd>
+   psd_to_cocoa.py process <psd>
+   psd_to_cocoa.py input <file>     processes PSDs found in a file. TODO
 
 Options:
     -h --help     Show this screen.
@@ -38,7 +39,7 @@ class PSDToCocoa:
     def __init__(self):
         self.configure_logging()
         self.arguments = docopt(__doc__, version='PSDToCocoa 0.1')
-        print(self.arguments)
+        # print(self.arguments)
         pass
 
     def configure_logging(self):
@@ -68,11 +69,19 @@ class PSDToCocoa:
         if match:
             self.render_image(item, source_bbox)
 
-        if item.name[:4] == 'view':
+        match = re.search(r".*btn_.*", item.name)
+        if match:
+            self.render_button(item, source_bbox)
+
+        match = re.search(r".*view_.*", item.name)
+        if match:
             self.render_view(item, source_bbox)
 
-        if item.name[:4] == 'image':
-            self.render_image(item, source_bbox)
+        # if item.name[:4] == 'view':
+        #     self.render_view(item, source_bbox)
+        #
+        # if item.name[:4] == 'image':
+        #     self.render_image(item, source_bbox)
 
         # if item.name[-7:] == '@2x.png':
 
@@ -86,17 +95,19 @@ class PSDToCocoa:
     def display(self, item, source_bbox):
         print "\n\n"
         print item.name
-        self.translate(item.bbox, source_bbox)
+        self.translate(item, source_bbox)
 
     def render_view(self, item, source_bbox):
         print "\n\n"
         print item.name
-        self.translate(item.bbox, source_bbox)
+        dim = self.translate(item, source_bbox)
+        print "H:|-{0}-[{1}({2})]".format(dim[0], item.name, dim[2])
+        print "V:|-{0}-[{1}({2})]".format(dim[1], item.name, dim[3])
 
     def render_image(self, item, source_bbox):
-        print "\n\nImage"
+        print "\n\n* Image"
         print item.name
-        dim = self.translate(item.bbox, source_bbox)
+        dim = self.translate(item, source_bbox)
 
         basename = os.path.basename(item.name)
         just_filename = os.path.splitext(basename)[0][:-3]
@@ -105,25 +116,46 @@ class PSDToCocoa:
         print CGRect
         print "{0} = [[UIImageView alloc] initWithFrame:CGRectMake{1}];".format(
             just_filename, CGRect)
-        print '[{0} setImage:[UIImage imageNamed:@"hypbp_img_title.png"]];'.format(
+        print '[{0} setImage:[UIImage imageNamed:@"{1}"]];'.format(
             just_filename, just_filename + '.png')
 
-        # hypbp_img_title = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 618, 75)];
-        # [hypbp_img_title setImage:[UIImage imageNamed:@"hypbp_img_title.png"]];
+    def render_button(self, item, source_bbox):
+        print "\n\n* Button"
+        print item.name
+        dim = self.translate(item.bbox, source_bbox)
+
+        basename = os.path.basename(item.name)
+        just_filename = os.path.splitext(basename)[0][:-3]
+
+        #post_button = [[UIButton alloc] initWithFrame:CGRectMake(474, 121, 111, 29)];
+        #[post_button setImage:[UIImage imageNamed:@"hypb_btn_comment_default.png"] forState:UIControlStateNormal];
+        #[post_button setImage:[UIImage imageNamed:@"hypb_btn_comment_glow.png"] forState:UIControlStateHighlighted];
+
+        CGRect = "({0}, {1}, {2}, {3})".format(dim[0], dim[1], dim[2], dim[3])
+        print CGRect
+        print "{0} = [[UIButton alloc] initWithFrame:CGRectMake{1}];".format(
+            just_filename, CGRect)
+        print '[{0} setImage:[UIImage imageNamed:@"{1}"] forState:UIControlStateNormal];'.format(
+            just_filename, just_filename + '.png')
+        print '[{0} setImage:[UIImage imageNamed:@"{1}"] forState:UIControlStateHighlighted];'.format(
+            just_filename, just_filename + '.png')
 
 
-    def translate(self, bbox, source_bbox):
+    def translate(self, item, source_bbox):
         d = 2
 
+        bbox = item.bbox
         # Seems as though the bounding box is 1px larger than the layer
-        origin_x = (bbox.x1 + 1) / d
-        origin_y = (bbox.y1 + 1) / d
+        origin_x = (bbox.x1) / d
+        origin_y = (bbox.y1) / d
 
-        source_origin_x = (source_bbox.x1 + 1) / d
-        source_origin_y = (source_bbox.y1 + 1) / d
+        source_origin_x = (source_bbox.x1) / d
+        source_origin_y = (source_bbox.y1) / d
 
-        width_1x = (bbox.width - 2) / d
-        height_1x = (bbox.height - 2) / d
+        # width_1x = (bbox.width - 2) / d
+        width_1x = (bbox.width) / d
+        # height_1x = (bbox.height - 2) / d
+        height_1x = (bbox.height) / d
 
         print "Absolute: CGRectMake({0}, {1}, {2}, {3})".format(origin_x,
                                                                 origin_y,
